@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Secret Alchemist — Inventory Dashboard</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a18;min-height:100vh}
+  #login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh}
+  .login-card{background:#fff;border-radius:16px;border:1px solid #e0dfd8;padding:2.5rem;width:100%;max-width:380px;text-align:center}
+  .login-card h1{font-size:20px;font-weight:600;margin-bottom:4px}
+  .login-card p{font-size:13px;color:#888;margin-bottom:1.5rem}
+  .field{margin-bottom:1rem;text-align:left}
+  .field label{display:block;font-size:12px;font-weight:500;color:#52514e;margin-bottom:5px}
+  .field input{width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none}
+  .field input:focus{border-color:#2a78d6}
+  .btn{width:100%;padding:10px;background:#1a1a18;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;margin-top:4px}
+  .btn:hover{background:#333}
+  .err{color:#c0392b;font-size:13px;margin-top:8px;display:none}
+  #dashboard{display:none}
+  .topbar{background:#fff;border-bottom:1px solid #e0dfd8;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+  .topbar h1{font-size:16px;font-weight:600}
+  .pill{background:#f0efe8;border-radius:20px;padding:3px 10px;font-size:12px;color:#52514e;margin-left:8px}
+  .tbr{display:flex;align-items:center;gap:10px}
+  .sync{font-size:12px;color:#aaa}
+  .btn-sm{padding:6px 14px;border:1px solid #ddd;border-radius:8px;background:#fff;font-size:13px;cursor:pointer}
+  .btn-sm:hover{background:#f5f5f0}
+  .btn-out{color:#c0392b}
+  .main{padding:20px 24px;max-width:1400px;margin:0 auto}
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+  .mc{background:#fff;border-radius:12px;border:1px solid #e0dfd8;padding:1rem 1.25rem}
+  .mc .ml{font-size:12px;color:#888;margin-bottom:4px}
+  .mc .mv{font-size:26px;font-weight:600}
+  .mc .ms{font-size:11px;color:#aaa;margin-top:2px}
+  .warn .mv{color:#d97706}
+  .danger .mv{color:#c0392b}
+  .charts-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+  .cc{background:#fff;border-radius:12px;border:1px solid #e0dfd8;padding:1rem 1.25rem}
+  .cc h3{font-size:13px;font-weight:600;color:#52514e;margin-bottom:12px}
+  .bi{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px}
+  .bl{width:110px;color:#52514e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bt{flex:1;background:#f0efe8;border-radius:4px;height:10px}
+  .bf{height:100%;border-radius:4px}
+  .bv{width:52px;text-align:right;font-weight:500}
+  .sc{background:#fff;border-radius:12px;border:1px solid #e0dfd8;overflow:hidden;margin-bottom:20px}
+  .sh{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f0efe8}
+  .sh h2{font-size:14px;font-weight:600}
+  .filters{display:flex;gap:8px;flex-wrap:wrap}
+  .filters input,.filters select{font-size:12px;padding:5px 9px;border:1px solid #ddd;border-radius:6px;background:#fff;outline:none}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{text-align:left;font-size:11px;font-weight:600;color:#888;padding:8px 14px;border-bottom:1px solid #f0efe8;background:#fafaf8;text-transform:uppercase;letter-spacing:0.03em}
+  tbody tr{border-bottom:1px solid #f5f5f0}
+  tbody tr:hover{background:#fafaf8}
+  tbody td{padding:10px 14px}
+  .sku{font-family:monospace;font-size:11px;color:#888}
+  .badge{display:inline-block;font-size:11px;padding:2px 9px;border-radius:20px;font-weight:500}
+  .ok{background:#e8f5e9;color:#2e7d32}
+  .low{background:#fff8e1;color:#b45309}
+  .out{background:#fdecea;color:#c0392b}
+  .loading{text-align:center;padding:3rem;color:#888;font-size:14px}
+  .spinner{display:inline-block;width:22px;height:22px;border:2px solid #ddd;border-top-color:#1a1a18;border-radius:50%;animation:spin 0.7s linear infinite;margin-bottom:8px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .no-data{text-align:center;padding:2rem;color:#aaa;font-size:13px}
+  .pag{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid #f0efe8;font-size:12px;color:#888}
+  .pag button{padding:4px 10px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-size:12px;margin-left:6px}
+  .pag button:disabled{opacity:0.4;cursor:not-allowed}
+  @media(max-width:700px){.charts-row{grid-template-columns:1fr}.main{padding:12px}}
+</style>
+</head>
+<body>
+<div id="login-screen">
+  <div class="login-card">
+    <h1>Inventory Dashboard</h1>
+    <p>Secret Alchemist · Powered by Uniware</p>
+    <div class="field">
+      <label>Dashboard password</label>
+      <input type="password" id="dash-pass" placeholder="Enter password">
+    </div>
+    <button class="btn" onclick="checkPass()">View Dashboard</button>
+    <p class="err" id="err">Incorrect password.</p>
+  </div>
+</div>
+
+<div id="dashboard">
+  <div class="topbar">
+    <div style="display:flex;align-items:center">
+      <h1>Inventory Dashboard</h1>
+      <span class="pill">Secret Alchemist</span>
+    </div>
+    <div class="tbr">
+      <span class="sync" id="sync-time">Loading...</span>
+      <button class="btn-sm" onclick="loadData()">↻ Refresh</button>
+      <button class="btn-sm btn-out" onclick="logout()">Logout</button>
+    </div>
+  </div>
+  <div class="main">
+    <div class="metrics">
+      <div class="mc"><div class="ml">Total SKUs</div><div class="mv" id="m1">—</div></div>
+      <div class="mc"><div class="ml">Total quantity</div><div class="mv" id="m2">—</div></div>
+      <div class="mc warn"><div class="ml">Low stock</div><div class="mv" id="m3">—</div><div class="ms">below reorder level</div></div>
+      <div class="mc danger"><div class="ml">Out of stock</div><div class="mv" id="m4">—</div></div>
+    </div>
+    <div class="charts-row">
+      <div class="cc"><h3>Stock by facility</h3><div id="wh-chart"><div class="loading"><div class="spinner"></div><br>Loading...</div></div></div>
+      <div class="cc"><h3>Status breakdown</h3><div id="st-chart"><div class="loading"><div class="spinner"></div><br>Loading...</div></div></div>
+    </div>
+    <div class="sc">
+      <div class="sh">
+        <h2>Inventory items</h2>
+        <div class="filters">
+          <input type="text" id="srch" placeholder="Search SKU / name..." oninput="filter()">
+          <select id="fst" onchange="filter()">
+            <option value="">All status</option>
+            <option value="ok">In stock</option>
+            <option value="low">Low stock</option>
+            <option value="out">Out of stock</option>
+          </select>
+          <select id="ffac" onchange="filter()"><option value="">All facilities</option></select>
+        </div>
+      </div>
+      <div id="tbl"><div class="loading"><div class="spinner"></div><br>Fetching from Uniware...</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const PASS = 'SA@inventory2024';
+let ALL=[], FILT=[], PAGE=1, PER=25;
+
+function checkPass(){
+  if(document.getElementById('dash-pass').value===PASS){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('dashboard').style.display='block';
+    loadData();
+  } else {
+    document.getElementById('err').style.display='block';
+  }
+}
+
+function logout(){
+  document.getElementById('dashboard').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('dash-pass').value='';
+}
+
+async function loadData(){
+  document.getElementById('sync-time').textContent='Syncing...';
+  document.getElementById('tbl').innerHTML='<div class="loading"><div class="spinner"></div><br>Fetching live data from Uniware...</div>';
+  try{
+    const res = await fetch('/api/inventory');
+    const json = await res.json();
+    if(json.error) throw new Error(json.error);
+    process(json.data, json.syncTime);
+  }catch(e){
+    document.getElementById('tbl').innerHTML=`<div class="no-data">Error: ${e.message}<br><button onclick="loadData()" style="margin-top:10px;padding:6px 14px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer">Retry</button></div>`;
+    document.getElementById('sync-time').textContent='Sync failed';
+  }
+}
+
+function process(data, syncTime){
+  const raw = data.inventorySnapshotList || data.inventory || data.itemInventoryList || [];
+  ALL = raw.map(i=>{
+    const qty = i.goodQuantity??i.availableQuantity??i.quantity??0;
+    const reorder = i.minimumOrderQuantity??i.reorderLevel??0;
+    let status='ok';
+    if(qty===0) status='out';
+    else if(reorder>0 && qty<reorder) status='low';
+    return { sku:i.itemSKU||i.itemTypeCode||i.sku||'—', name:i.itemName||i.itemTypeName||i.name||'—', facility:i.facilityCode||i.facilityName||i.warehouseCode||'—', category:i.categoryCode||i.category||'—', qty, reorder, status };
+  });
+  const facs=[...new Set(ALL.map(i=>i.facility))].sort();
+  const sel=document.getElementById('ffac');
+  sel.innerHTML='<option value="">All facilities</option>'+facs.map(f=>`<option value="${f}">${f}</option>`).join('');
+  filter();
+  metrics(ALL);
+  charts(ALL);
+  const t=syncTime?new Date(syncTime).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}):new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('sync-time').textContent='Last sync: '+t;
+}
+
+function filter(){
+  const q=document.getElementById('srch').value.toLowerCase();
+  const st=document.getElementById('fst').value;
+  const fac=document.getElementById('ffac').value;
+  FILT=ALL.filter(i=>(!q||i.sku.toLowerCase().includes(q)||i.name.toLowerCase().includes(q))&&(!st||i.status===st)&&(!fac||i.facility===fac));
+  PAGE=1; renderTable();
+}
+
+function renderTable(){
+  if(!FILT.length){document.getElementById('tbl').innerHTML='<div class="no-data">No items found.</div>';return;}
+  const s=(PAGE-1)*PER, e=s+PER;
+  const rows=FILT.slice(s,e);
+  const lbl={ok:'In stock',low:'Low stock',out:'Out of stock'};
+  document.getElementById('tbl').innerHTML=`<div style="overflow-x:auto"><table>
+    <thead><tr><th>SKU</th><th>Product name</th><th>Category</th><th>Facility</th><th style="text-align:right">Quantity</th><th style="text-align:right">Reorder level</th><th>Status</th></tr></thead>
+    <tbody>${rows.map(i=>`<tr><td class="sku">${i.sku}</td><td style="font-weight:500">${i.name}</td><td style="color:#888">${i.category}</td><td>${i.facility}</td><td style="text-align:right;font-weight:500">${i.qty.toLocaleString()}</td><td style="text-align:right;color:#aaa">${i.reorder>0?i.reorder.toLocaleString():'—'}</td><td><span class="badge ${i.status}">${lbl[i.status]}</span></td></tr>`).join('')}</tbody>
+  </table></div>
+  <div class="pag"><span>Showing ${s+1}–${Math.min(e,FILT.length)} of ${FILT.length} items</span><div><button onclick="pg(-1)" ${PAGE===1?'disabled':''}>← Prev</button><button onclick="pg(1)" ${e>=FILT.length?'disabled':''}>Next →</button></div></div>`;
+}
+
+function pg(d){PAGE+=d;renderTable();window.scrollTo(0,400);}
+
+function metrics(items){
+  document.getElementById('m1').textContent=items.length.toLocaleString();
+  document.getElementById('m2').textContent=items.reduce((s,i)=>s+i.qty,0).toLocaleString();
+  document.getElementById('m3').textContent=items.filter(i=>i.status==='low').length;
+  document.getElementById('m4').textContent=items.filter(i=>i.status==='out').length;
+}
+
+function charts(items){
+  const byF={};
+  items.forEach(i=>{byF[i.facility]=(byF[i.facility]||0)+i.qty;});
+  const sorted=Object.entries(byF).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const maxQ=sorted[0]?.[1]||1;
+  const colors=['#2a78d6','#1baf7a','#eb6834','#eda100','#e87ba4','#4a3aa7','#e34948','#888'];
+  document.getElementById('wh-chart').innerHTML=sorted.length?sorted.map(([f,q],i)=>`<div class="bi"><span class="bl" title="${f}">${f}</span><div class="bt"><div class="bf" style="width:${Math.round(q/maxQ*100)}%;background:${colors[i%colors.length]}"></div></div><span class="bv">${q.toLocaleString()}</span></div>`).join(''):'<div class="no-data">No data</div>';
+  const cnt={ok:0,low:0,out:0};
+  items.forEach(i=>cnt[i.status]++);
+  const sc={ok:'#1baf7a',low:'#eda100',out:'#e34948'};
+  const sl={ok:'In stock',low:'Low stock',out:'Out of stock'};
+  const maxC=Math.max(...Object.values(cnt),1);
+  document.getElementById('st-chart').innerHTML=Object.entries(cnt).map(([s,c])=>`<div class="bi"><span class="bl">${sl[s]}</span><div class="bt"><div class="bf" style="width:${Math.round(c/maxC*100)}%;background:${sc[s]}"></div></div><span class="bv">${c} SKUs</span></div>`).join('');
+}
+
+document.getElementById('dash-pass').addEventListener('keydown',e=>{if(e.key==='Enter')checkPass();});
+</script>
+</body>
+</html>
