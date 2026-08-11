@@ -17,7 +17,9 @@ async function getToken() {
   if (cachedToken && tokenExpiry && Date.now() < tokenExpiry) return cachedToken;
   const url = `https://${TENANT}.unicommerce.com/oauth/token?grant_type=password&client_id=my-trusted-client&username=${encodeURIComponent(USERNAME)}&password=${encodeURIComponent(PASSWORD)}`;
   const res = await fetch(url);
-  const data = await res.json();
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch(e) { throw new Error('Token parse failed: ' + text.substring(0,200)); }
   if (!data.access_token) throw new Error('Auth failed: ' + JSON.stringify(data));
   cachedToken = data.access_token;
   tokenExpiry = Date.now() + (data.expires_in * 1000) - 60000;
@@ -29,10 +31,18 @@ app.get('/api/inventory', async (req, res) => {
     const token = await getToken();
     const invRes = await fetch(`https://${TENANT}.unicommerce.com/services/rest/v1/inventory/inventorySnapshot/get`, {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      headers: { 
+        'Authorization': 'Bearer ' + token, 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
       body: JSON.stringify({ pageNumber: 0, pageSize: 500 })
     });
-    const data = await invRes.json();
+    const text = await invRes.text();
+    let data;
+    try { data = JSON.parse(text); } catch(e) { 
+      throw new Error('Inventory parse failed (status ' + invRes.status + '): ' + text.substring(0,300));
+    }
     res.json({ success: true, data, syncTime: new Date().toISOString() });
   } catch(e) {
     res.status(500).json({ error: e.message });
